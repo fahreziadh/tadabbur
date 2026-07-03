@@ -16,6 +16,7 @@
 	import { dur } from '$lib/motion';
 	import Icon from '$lib/components/Icon.svelte';
 	import Segmented from '$lib/components/Segmented.svelte';
+	import OfflineSettings from '$lib/components/OfflineSettings.svelte';
 
 	const themeLabels: Record<Theme, () => string> = {
 		light: m.theme_light,
@@ -387,6 +388,9 @@
 					</div>
 				</div>
 			</section>
+
+			<!-- Offline storage: install status, re-download, clear. -->
+			<OfflineSettings />
 
 			<!-- Keyboard shortcuts. -->
 			<section class="bg-surface overflow-hidden rounded-2xl border border-edge">

@@ -3,18 +3,16 @@
 	import { fade } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import { m } from '$lib/paraglide/messages';
-	import { contentSync, syncContent } from '$lib/content/sync.svelte';
+	import { contentSync, syncContent, syncPct, formatMb } from '$lib/content/sync.svelte';
 
 	onMount(() => {
-		void syncContent();
+		// First-run offline: runSync rejects on the manifest fetch. The splash
+		// still closes via runSync's finally; swallow so it isn't an unhandled
+		// rejection (the settings re-sync surfaces failures with its own UI).
+		void syncContent().catch(() => {});
 	});
 
-	const pct = $derived(
-		contentSync.totalBytes
-			? Math.min(100, Math.floor((contentSync.receivedBytes / contentSync.totalBytes) * 100))
-			: 0
-	);
-	const mb = (bytes: number) => (bytes / 1e6).toFixed(1);
+	const pct = $derived(syncPct());
 </script>
 
 {#if contentSync.installing}
@@ -36,7 +34,7 @@
 			</div>
 			<p class="text-faint mt-3 text-xs tabular-nums">
 				{#if contentSync.totalBytes}
-					{pct}% · {mb(contentSync.receivedBytes)} / {mb(contentSync.totalBytes)} MB
+					{pct}% · {formatMb(contentSync.receivedBytes)} / {formatMb(contentSync.totalBytes)} MB
 				{:else}
 					&nbsp;
 				{/if}

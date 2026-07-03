@@ -4,6 +4,13 @@
 - **Package Manager**: bun
 - **Add-ons**: tailwindcss, paraglide, mdsvex, mcp, sveltekit-adapter, eslint, prettier
 
+## Coding Rules
+
+- Functions should do one thing, and their name should fully describe that thing. If the name needs "and" in it, split the function.
+- Do not add comments unless they are truly necessary or important, and never use more than one line per comment. Comments should explain why a non-obvious decision was made, never what the code does.
+- Write functions and code that are easily readable and efficient — code that doesn't need constant comments to explain it, and that another developer can easily understand just by reading it. Achieve this through clear variable and function names, logical sequencing of functions, or well-structured wrappers.
+- Functions with zero parameters are great, one parameter is good, two parameters are fine, but three or more is a signal to reconsider the design — prefer wrapping them in a single object when the parameters are related or likely to grow.
+
 ---
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:

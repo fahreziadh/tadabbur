@@ -6,16 +6,13 @@
 	import { contentSync, syncContent, syncPct, formatMb } from '$lib/content/sync.svelte';
 
 	onMount(() => {
-		// First-run offline: runSync rejects on the manifest fetch. The splash
-		// still closes via runSync's finally; swallow so it isn't an unhandled
-		// rejection (the settings re-sync surfaces failures with its own UI).
 		void syncContent().catch(() => {});
 	});
 
-	const pct = $derived(syncPct());
+	const pct = $derived(contentSync.showSetupScreen ? syncPct() : 100);
 </script>
 
-{#if contentSync.installing}
+{#if contentSync.showSetupScreen}
 	<div
 		out:fade={{ duration: dur(300) }}
 		class="bg-paper fixed inset-0 z-50 flex items-center justify-center p-6"

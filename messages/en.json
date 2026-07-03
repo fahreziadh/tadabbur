@@ -74,7 +74,7 @@
 	"settings_roadmap_page": "Roadmap",
 	"settings_github": "GitHub repository",
 	"setup_title": "Preparing Tadabbur",
-	"setup_body": "Downloading the Quran and tafsir so everything opens instantly, even offline. This happens once.",
+	"setup_body": "Downloading the Quran so it opens instantly, even offline. Tafsir finishes in the background. This happens once.",
 	"settings_offline": "Offline reading",
 	"offline_ready": "Ready to read offline",
 	"offline_not_ready": "Not ready for offline yet",

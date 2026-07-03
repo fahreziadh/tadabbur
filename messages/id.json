@@ -119,6 +119,7 @@
 	"tafsir_error": "Gagal memuat tafsir. Periksa koneksimu.",
 	"tafsir_covers": "Mencakup ayat {from}–{to}",
 	"play": "Putar",
+	"play_surah": "Putar surah",
 	"play_selection": "Putar pilihan",
 	"play_this_ayah": "Putar ayat ini",
 	"play_from_here": "Putar dari sini berlanjut",

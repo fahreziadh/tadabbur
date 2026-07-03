@@ -119,6 +119,7 @@
 	"tafsir_error": "Could not load tafsir. Check your connection.",
 	"tafsir_covers": "Covers verses {from}–{to}",
 	"play": "Play",
+	"play_surah": "Play surah",
 	"play_selection": "Play selection",
 	"play_this_ayah": "Play this ayah",
 	"play_from_here": "Play from here onward",

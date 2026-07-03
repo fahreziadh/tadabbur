@@ -15,6 +15,8 @@ class Player {
 	loading = $state(false);
 	/** True while a selected word range (not the whole verse) is playing. */
 	rangeActive = $state(false);
+	/** True while whole-surah (follow-along) playback is the active intent — not single-ayah, not a word range. */
+	continuous = $state(false);
 
 	#audio: HTMLAudioElement | null = null;
 	#timings: SurahTimings | null = null;
@@ -37,19 +39,28 @@ class Player {
 			});
 			this.#audio.addEventListener('ended', () => {
 				this.playing = false;
-				this.current = null;
-				this.currentWord = null;
-				this.rangeActive = false;
+				this.#reset();
 				cancelAnimationFrame(this.#raf);
 			});
 			this.#audio.addEventListener('error', () => {
 				this.playing = false;
-				this.current = null;
-				this.currentWord = null;
-				this.rangeActive = false;
+				this.#reset();
 			});
 		}
 		return this.#audio;
+	}
+
+	/**
+	 * Clears the now-playing identity so every terminal path (ended, error, a
+	 * missing timing, a failed load, stop) leaves current/rangeActive/continuous
+	 * in sync — otherwise a failed continuous play could strand `continuous` at
+	 * true and light the header button with nothing sounding.
+	 */
+	#reset() {
+		this.current = null;
+		this.currentWord = null;
+		this.rangeActive = false;
+		this.continuous = false;
 	}
 
 	/**
@@ -95,6 +106,9 @@ class Player {
 		this.current = { surah, verse };
 		this.loading = true;
 		this.rangeActive = !!opts?.words;
+		// Whole-surah intent — set on every play() so a later single-ayah or
+		// word-range play() clears a stale true. A range is never whole-surah.
+		this.continuous = opts?.continuous === true && !opts?.words;
 		try {
 			const key = `${app.prefs.reciter}:${surah}`;
 			if (this.#loadedKey !== key) {
@@ -114,8 +128,7 @@ class Player {
 			}
 			const timing = this.#timings?.verses[verse - 1];
 			if (!timing) {
-				this.current = null;
-				this.rangeActive = false;
+				this.#reset();
 				return;
 			}
 			// QDC verse windows (timestamp_from/to) bleed into neighboring
@@ -145,8 +158,7 @@ class Player {
 			await audio.play();
 		} catch {
 			if (token === this.#playToken) {
-				this.current = null;
-				this.rangeActive = false;
+				this.#reset();
 				this.#loadedKey = '';
 			}
 		} finally {
@@ -183,9 +195,8 @@ class Player {
 		if (!this.#audio) return;
 		this.#playToken++;
 		this.#audio.pause();
-		this.current = null;
+		this.#reset();
 		this.loading = false;
-		this.rangeActive = false;
 		this.#stopAt = null;
 	}
 

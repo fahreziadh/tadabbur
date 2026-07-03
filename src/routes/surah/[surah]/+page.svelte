@@ -23,6 +23,17 @@
 	const prev = $derived(chapter.number > 1 ? data.chapters[chapter.number - 2] : null);
 	const next = $derived(chapter.number < 114 ? data.chapters[chapter.number] : null);
 
+	// Whole-surah playback state for the header button. `isThisContinuous`
+	// drives both the pressed styling and aria-pressed so they always agree;
+	// `surahSounding` (continuous + this surah + actually playing) is the only
+	// state that shows the pause glyph — a single ayah of this surah reads as
+	// idle play. `surahLoading` covers the window after a tap where continuous +
+	// current are set synchronously but the seek hasn't landed yet: show a
+	// spinner (like the pill) rather than a premature "Resume".
+	const isThisContinuous = $derived(player.continuous && player.current?.surah === data.surah);
+	const surahLoading = $derived(isThisContinuous && player.loading);
+	const surahSounding = $derived(isThisContinuous && player.playing);
+
 	const skeletonRows = Array.from({ length: 6 }, (_, i) => i);
 
 	// On the server the load awaited the data; on client navigation it hands
@@ -137,7 +148,7 @@
 		const box = main.getBoundingClientRect();
 		const rect = el.getBoundingClientRect();
 		const inView = rect.top >= box.top && rect.top <= box.top + box.height * 0.7;
-		if (!inView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		if (!inView) el.scrollIntoView({ block: 'center', behavior: dur(1) ? 'smooth' : 'auto' });
 	});
 
 	// Selecting (blocking) Arabic words opens a word-by-word popover.
@@ -214,6 +225,31 @@
 		app.prefs.focusMode = !app.prefs.focusMode;
 		app.persistPrefs();
 	}
+
+	// Whole-surah play/pause. Paused or playing continuous session for THIS
+	// surah → pause/resume in place (word-accurate, no reseek). Otherwise start
+	// a fresh continuous recitation. Resume verse, in priority order: the live
+	// position if it's this surah → the topmost verse the reader is looking at
+	// → the top. surahProgress is deliberately not a source — it's a high-water
+	// mark and would fling the reader past where they are.
+	function toggleSurah() {
+		// Load window: continuous/current are set synchronously by play() but the
+		// seek hasn't landed. Ignore the tap — togglePause() here would start audio
+		// from the un-seeked position, racing the in-flight seek. The spinner tells
+		// the user it's already working.
+		if (surahLoading) return;
+		if (isThisContinuous) {
+			player.togglePause();
+			return;
+		}
+		const start =
+			player.current?.surah === data.surah
+				? player.current.verse
+				: app.lastRead?.surah === data.surah
+					? app.lastRead.verse
+					: 1;
+		void player.play(data.surah, start, { continuous: true });
+	}
 </script>
 
 <svelte:head>
@@ -248,6 +284,32 @@
 				{/if}
 			</div>
 			<div class="flex shrink-0 items-center gap-1">
+				<button
+					type="button"
+					class="rounded-lg p-2 transition-colors
+						{isThisContinuous ? 'bg-accent-soft text-accent' : 'text-faint hover:bg-edge-soft hover:text-body'}"
+					title={surahSounding
+						? m.pause()
+						: surahLoading
+							? m.play_surah()
+							: isThisContinuous
+								? m.resume()
+								: m.play_surah()}
+					aria-label={surahSounding
+						? m.pause()
+						: surahLoading
+							? m.play_surah()
+							: isThisContinuous
+								? m.resume()
+								: m.play_surah()}
+					aria-pressed={isThisContinuous}
+					onclick={toggleSurah}
+				>
+					<Icon
+						name={surahLoading ? 'spinner' : surahSounding ? 'pause' : 'play'}
+						class={surahLoading ? 'animate-spin' : ''}
+					/>
+				</button>
 				<button
 					type="button"
 					class="rounded-lg p-2 transition-colors

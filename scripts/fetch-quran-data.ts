@@ -3,15 +3,22 @@
  * Run: bun run scripts/fetch-quran-data.ts
  *
  * Sources:
- * - Arabic (Uthmani), EN/ID translations, chapter metadata, EN tafsir: quran.com API v4
+ * - Arabic (QPC Uthmani Hafs), EN/ID word translations: quran.com QDC API
+ * - EN/ID verse translations, chapter metadata, EN tafsir: quran.com API v4
  * - ID tafsir (Tafsir Kemenag): equran.id API v2
  * - ID tafsir (Al-Mukhtasar, Tafsir As-Sa'di): QUL editions via the spa5k/tafsir_api mirror
  *
  * Resources are selected by exact name match against the live resource lists
  * (never hardcoded-by-guess); the chosen IDs are logged and verified.
+ *
+ * The Arabic text is qpc_uthmani_hafs — the King Fahd Complex's own encoding,
+ * which the bundled KFGQPC Hafs font was designed for. quran.com's generic
+ * text_uthmani encodes some marks differently (e.g. dagger alif on a tatweel)
+ * and the font shapes those wrong. Only the QDC API serves this field.
  */
 
 const QURAN_API = 'https://api.quran.com/api/v4';
+const QDC_API = 'https://api.qurancdn.com/api/qdc';
 const EQURAN_API = 'https://equran.id/api/v2';
 const OUT = new URL('../static', import.meta.url).pathname;
 
@@ -128,18 +135,28 @@ console.log(`✓ chapters.json (${chapters.length} surahs)`);
 interface ApiWord {
 	position: number;
 	char_type_name: string;
-	text_uthmani: string;
+	qpc_uthmani_hafs: string;
 	translation: { text: string };
 }
 
 interface ApiVerse {
 	verse_number: number;
 	verse_key: string;
-	text_uthmani: string;
+	qpc_uthmani_hafs: string;
 	page_number: number;
 	juz_number: number;
 	translations: { resource_id: number; text: string }[];
 	words: ApiWord[];
+}
+
+/** The QDC verse text carries a trailing ayah number — the app draws its own marker. */
+function stripVerseNumber(text: string): string {
+	return text.replace(/\s*[٠-٩]+\s*$/u, '');
+}
+
+/** Ayah-number tokens are usually char_type "end", but 2:181's is mistyped as "word". */
+function isVerseWord(w: ApiWord): boolean {
+	return w.char_type_name === 'word' && !/^[٠-٩]+$/u.test(w.qpc_uthmani_hafs);
 }
 
 async function fetchVerses(surah: number, language: string, withTranslations: boolean) {
@@ -150,7 +167,7 @@ async function fetchVerses(surah: number, language: string, withTranslations: bo
 	let page = 1;
 	while (true) {
 		const data = await getJson<{ verses: ApiVerse[]; pagination: { next_page: number | null } }>(
-			`${QURAN_API}/verses/by_chapter/${surah}?fields=text_uthmani&words=true&word_fields=text_uthmani&language=${language}${translations}&per_page=50&page=${page}`
+			`${QDC_API}/verses/by_chapter/${surah}?fields=qpc_uthmani_hafs&words=true&word_fields=qpc_uthmani_hafs&language=${language}${translations}&per_page=50&page=${page}`
 		);
 		verses.push(...data.verses);
 		if (!data.pagination.next_page) break;
@@ -178,15 +195,15 @@ await pool(chapters, 6, async (chapter) => {
 	await write(`quran/${chapter.number}.json`, {
 		surah: chapter.number,
 		verses: verses.map((v, vi) => {
-			const wordsEn = v.words.filter((w) => w.char_type_name === 'word');
-			const wordsId = versesId[vi].words.filter((w) => w.char_type_name === 'word');
+			const wordsEn = v.words.filter(isVerseWord);
+			const wordsId = versesId[vi].words.filter(isVerseWord);
 			if (wordsEn.length !== wordsId.length) {
 				throw new Error(`Word count mismatch at ${v.verse_key}`);
 			}
 			return {
 				n: v.verse_number,
 				key: v.verse_key,
-				arabic: v.text_uthmani,
+				arabic: stripVerseNumber(v.qpc_uthmani_hafs),
 				page: v.page_number,
 				juz: v.juz_number,
 				en: cleanTranslation(
@@ -196,7 +213,7 @@ await pool(chapters, 6, async (chapter) => {
 					v.translations.find((t) => t.resource_id === idTranslation.id)?.text ?? ''
 				),
 				words: wordsEn.map((w, wi) => ({
-					a: w.text_uthmani,
+					a: w.qpc_uthmani_hafs,
 					en: w.translation.text ?? '',
 					id: wordsId[wi].translation.text ?? ''
 				}))

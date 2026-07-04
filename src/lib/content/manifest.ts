@@ -1,4 +1,4 @@
-export const CONTENT_CACHE = 'content-v2';
+export const CONTENT_CACHE = 'content-v3';
 
 export function isContentPath(pathname: string): boolean {
 	return pathname.startsWith('/quran/') || pathname.startsWith('/tafsir/');

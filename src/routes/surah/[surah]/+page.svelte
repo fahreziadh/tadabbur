@@ -346,7 +346,7 @@
 				lang="ar"
 				class="font-arabic border-edge-soft text-ink border-y py-6 text-center text-3xl"
 			>
-				بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+				بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
 			</p>
 		{/if}
 

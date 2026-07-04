@@ -4,8 +4,10 @@
 		arabicFontStacks,
 		themes,
 		type ArabicFont,
-		type Theme
+		type Theme,
+		type TranslationPref
 	} from '$lib/app-state.svelte';
+	import { translationLang } from '$lib/quran/locale';
 	import { reciters, type ReciterId } from '$lib/quran/audio';
 	import { getTimings } from '$lib/quran/timings';
 	import { player } from '$lib/player.svelte';
@@ -34,7 +36,7 @@
 		{ value: 'noto', label: 'Noto Naskh Arabic' }
 	];
 
-	function setPref<K extends 'theme' | 'arabicFont' | 'reciter'>(
+	function setPref<K extends 'theme' | 'arabicFont' | 'reciter' | 'translation'>(
 		key: K,
 		value: (typeof app.prefs)[K]
 	) {
@@ -168,10 +170,31 @@
 						<Segmented
 							options={[
 								{ value: 'en', label: 'English' },
-								{ value: 'id', label: 'Indonesia' }
+								{ value: 'id', label: 'Indonesia' },
+								{ value: 'ar', label: 'العربية' }
 							]}
 							value={getLocale()}
 							onselect={(value) => setLocale(value as Locale)}
+						/>
+					</div>
+
+					<div
+						class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-8"
+					>
+						<div>
+							<h3 class="text-ink text-sm font-medium">{m.settings_translation()}</h3>
+							<p class="text-faint mt-0.5 text-xs leading-relaxed">
+								{m.settings_translation_hint()}
+							</p>
+						</div>
+						<Segmented
+							options={[
+								{ value: 'en', label: 'Saheeh Int.' },
+								{ value: 'id', label: 'Kemenag' },
+								{ value: 'off', label: m.translation_off() }
+							]}
+							value={translationLang()}
+							onselect={(value) => setPref('translation', value as TranslationPref)}
 						/>
 					</div>
 

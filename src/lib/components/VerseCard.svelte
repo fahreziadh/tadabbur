@@ -6,6 +6,7 @@
 	import { lazyObserve } from '$lib/lazy-cards';
 	import type { Verse } from '$lib/quran/types';
 	import { verseTranslation } from '$lib/quran/locale';
+	import { arabicVerseNumber } from '$lib/quran/format';
 	import { m } from '$lib/paraglide/messages';
 	import Icon from './Icon.svelte';
 	import TafsirPanel from './TafsirPanel.svelte';
@@ -109,12 +110,15 @@
 					>{word.a + ' '}</span
 				>{/each}{:else}{plainText}{/if}<span
 			class="text-accent mx-1 inline-block"
-			style="font-size: calc(var(--arabic-size) * 0.6)">﴿{verse.n}﴾</span
+			style="font-size: calc(var(--arabic-size) * 0.6)">﴿{arabicVerseNumber(verse.n)}﴾</span
 		>
 	</p>
 
 	{#if !app.prefs.focusMode}
-		<p class="text-body mt-3 text-[15px] leading-relaxed">{verseTranslation(verse)}</p>
+		{@const translation = verseTranslation(verse)}
+		{#if translation}
+			<p class="text-body mt-3 text-[15px] leading-relaxed">{translation}</p>
+		{/if}
 
 		{#if !hydrated}
 			<div class="mt-3 h-[26px] no-hover:h-[34px]"></div>

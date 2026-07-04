@@ -5,6 +5,7 @@
 	import { getSurah } from '$lib/quran/data';
 	import { dur } from '$lib/motion';
 	import { m } from '$lib/paraglide/messages';
+	import { getLocale } from '$lib/paraglide/runtime';
 	import { app, arabicFontStacks, darkThemes } from '$lib/app-state.svelte';
 	import ActivityBar from '$lib/components/ActivityBar.svelte';
 	import BottomNav from '$lib/components/BottomNav.svelte';
@@ -14,6 +15,10 @@
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
+
+	// Prerendered shells bake lang="en" (no locale cookie at build time); the
+	// real locale is only known client-side, so stamp it for :lang() CSS and AT.
+	document.documentElement.lang = getLocale();
 
 	// Panes in visual order: activity bar, sidebar, main, info pane.
 	function visiblePanes(): HTMLElement[] {

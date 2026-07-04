@@ -7,7 +7,9 @@ import type { Chapter, Verse } from './types';
  */
 
 export function chapterName(chapter: Chapter): string {
-	return getLocale() === 'id' ? chapter.nameId : chapter.nameEn;
+	const locale = getLocale();
+	if (locale === 'ar') return chapter.nameArabic;
+	return locale === 'id' ? chapter.nameId : chapter.nameEn;
 }
 
 export function verseTranslation(verse: Verse): string {

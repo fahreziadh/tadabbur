@@ -168,7 +168,8 @@
 						<Segmented
 							options={[
 								{ value: 'en', label: 'English' },
-								{ value: 'id', label: 'Indonesia' }
+								{ value: 'id', label: 'Indonesia' },
+								{ value: 'ar', label: 'العربية' }
 							]}
 							value={getLocale()}
 							onselect={(value) => setLocale(value as Locale)}

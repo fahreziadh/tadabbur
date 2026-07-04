@@ -153,6 +153,11 @@ html {
 	background-color: var(--paper);
 }
 
+/* Arabic is a connected script — tracking utilities would break glyph joins. */
+:lang(ar) :where(*) {
+	letter-spacing: 0;
+}
+
 /* Consistent but quiet keyboard focus ring — visible, never shouty. */
 :focus-visible {
 	outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);

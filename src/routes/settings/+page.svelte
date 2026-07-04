@@ -189,8 +189,8 @@
 						</div>
 						<Segmented
 							options={[
-								{ value: 'en', label: 'English' },
-								{ value: 'id', label: 'Indonesia' },
+								{ value: 'en', label: 'Saheeh Int.' },
+								{ value: 'id', label: 'Kemenag' },
 								{ value: 'off', label: m.translation_off() }
 							]}
 							value={translationLang()}

@@ -43,7 +43,7 @@
 		const out: Hit[] = [];
 		for (const surah of corpus) {
 			for (const verse of surah.verses) {
-				if (verseTranslation(verse).toLowerCase().includes(q) || verse.arabic.includes(q)) {
+				if (verseTranslation(verse)?.toLowerCase().includes(q) || verse.arabic.includes(q)) {
 					out.push({
 						surah: surah.surah,
 						surahName: chapters[surah.surah - 1].nameSimple,
@@ -120,7 +120,7 @@
 						{hit.verse.key}
 					</span>
 					<span class="text-body mt-0.5 line-clamp-3 block text-sm">
-						{verseTranslation(hit.verse)}
+						{verseTranslation(hit.verse) ?? hit.verse.arabic}
 					</span>
 				</a>
 			</li>

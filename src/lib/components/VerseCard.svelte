@@ -114,7 +114,10 @@
 	</p>
 
 	{#if !app.prefs.focusMode}
-		<p class="text-body mt-3 text-[15px] leading-relaxed">{verseTranslation(verse)}</p>
+		{@const translation = verseTranslation(verse)}
+		{#if translation}
+			<p class="text-body mt-3 text-[15px] leading-relaxed">{translation}</p>
+		{/if}
 
 		{#if !hydrated}
 			<div class="mt-3 h-[26px] no-hover:h-[34px]"></div>

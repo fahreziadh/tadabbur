@@ -9,6 +9,9 @@ export const themes: Theme[] = ['light', 'dark', 'mushaf', 'rawdah', 'sea', 'nig
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- readonly constant, never mutated
 export const darkThemes: ReadonlySet<Theme> = new Set(['dark', 'sea', 'night']);
 export type ArabicFont = 'uthmani' | 'amiri' | 'scheherazade' | 'noto';
+/** 'auto' follows the UI locale; 'off' hides verse translations entirely. */
+export type TranslationPref = 'auto' | 'en' | 'id' | 'off';
+const translationPrefs: TranslationPref[] = ['auto', 'en', 'id', 'off'];
 
 export const arabicFontStacks: Record<ArabicFont, string> = {
 	uthmani: "'KFGQPC Uthmanic Hafs'",
@@ -36,6 +39,7 @@ interface Prefs {
 	sidebarOpen: boolean;
 	infoOpen: boolean;
 	reciter: ReciterId;
+	translation: TranslationPref;
 }
 
 const defaults: Prefs = {
@@ -45,7 +49,8 @@ const defaults: Prefs = {
 	focusMode: false,
 	sidebarOpen: true,
 	infoOpen: true,
-	reciter: 7
+	reciter: 7,
+	translation: 'auto'
 };
 
 function loadJson<T>(key: string, fallback: T): T {
@@ -69,6 +74,7 @@ function loadPrefs(): Prefs {
 	if (!themes.includes(prefs.theme)) {
 		prefs.theme = browser && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 	}
+	if (!translationPrefs.includes(prefs.translation)) prefs.translation = 'auto';
 	return prefs;
 }
 

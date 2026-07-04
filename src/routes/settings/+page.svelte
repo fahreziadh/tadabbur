@@ -17,7 +17,7 @@
 	import { fly } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import Icon from '$lib/components/Icon.svelte';
-	import Segmented from '$lib/components/Segmented.svelte';
+	import SettingSelect from '$lib/components/SettingSelect.svelte';
 	import OfflineSettings from '$lib/components/OfflineSettings.svelte';
 
 	const themeLabels: Record<Theme, () => string> = {
@@ -167,7 +167,7 @@
 							<h3 class="text-ink text-sm font-medium">{m.settings_language()}</h3>
 							<p class="text-faint mt-0.5 text-xs leading-relaxed">{m.settings_language_hint()}</p>
 						</div>
-						<Segmented
+						<SettingSelect
 							options={[
 								{ value: 'en', label: 'English' },
 								{ value: 'id', label: 'Indonesia' },
@@ -187,10 +187,10 @@
 								{m.settings_translation_hint()}
 							</p>
 						</div>
-						<Segmented
+						<SettingSelect
 							options={[
-								{ value: 'en', label: 'Saheeh Int.' },
-								{ value: 'id', label: 'Kemenag' },
+								{ value: 'en', label: 'English (Saheeh International)' },
+								{ value: 'id', label: 'Indonesia (Kemenag)' },
 								{ value: 'off', label: m.translation_off() }
 							]}
 							value={translationLang()}

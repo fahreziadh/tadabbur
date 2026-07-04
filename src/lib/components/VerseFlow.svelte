@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { player } from '$lib/player.svelte';
 	import { lazyObserve } from '$lib/lazy-cards';
+	import { wordHighlight } from '$lib/word-highlight.svelte';
 	import type { Verse } from '$lib/quran/types';
 	import { arabicVerseNumber } from '$lib/quran/format';
 	import { m } from '$lib/paraglide/messages';
@@ -36,11 +37,14 @@
 	aria-label={m.verse_aria({ key: verse.key })}
 	tabindex="0"
 	onkeydown={onKeydown}
-	class="verse-anchor rounded focus:outline-none focus-visible:bg-accent-soft [box-decoration-break:clone]"
+	class="verse-anchor rounded select-none focus:outline-none focus-visible:bg-accent-soft [box-decoration-break:clone]"
 	{@attach (node) => lazyObserve(node, (visible) => (nearViewport = visible))}
 	>{#if showWordSpans}{#each verse.words as word, i (i)}<span
 				data-word={i + 1}
-				class="transition-colors duration-100 {activeWord === i + 1 ? 'word-active' : ''}"
+				class="cursor-pointer transition-colors duration-100 can-hover:hover:text-accent {activeWord ===
+				i + 1
+					? 'word-active'
+					: ''} {wordHighlight.covers(surah, verse.n, i + 1) ? 'word-selected' : ''}"
 				>{word.a + ' '}</span
 			>{/each}{:else}{plainText}{/if}<span
 		class="text-accent mx-1 inline-block {isLoading ? 'animate-pulse' : ''}"

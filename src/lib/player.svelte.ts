@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { app } from './app-state.svelte';
+import { wordAudioUrl } from './quran/audio';
 import { getTimings, type SurahTimings, type VerseTiming } from './quran/timings';
 
 /**
@@ -19,6 +20,7 @@ class Player {
 	continuous = $state(false);
 
 	#audio: HTMLAudioElement | null = null;
+	#wordAudio: HTMLAudioElement | null = null;
 	#timings: SurahTimings | null = null;
 	#loadedKey = '';
 	#stopAt: number | null = null;
@@ -89,8 +91,8 @@ class Player {
 
 	/**
 	 * Plays a verse from its first word. Default stops at the end of the
-	 * ayah; `continuous` keeps reciting through the surah; `words` plays only
-	 * that word range (selection).
+	 * ayah; `continuous` keeps reciting through the surah; `words` plays that
+	 * range from the stream so the words stay connected as recited.
 	 */
 	async play(
 		surah: number,
@@ -102,6 +104,7 @@ class Player {
 		// Stop whatever is sounding right away — otherwise the old position
 		// keeps playing audibly until the seek below completes.
 		audio.pause();
+		this.#wordAudio?.pause();
 		const token = ++this.#playToken;
 		this.current = { surah, verse };
 		this.loading = true;
@@ -137,14 +140,18 @@ class Player {
 			const firstSeg = timing.segments[0];
 			const lastSeg = timing.segments[timing.segments.length - 1];
 			let startMs = firstSeg ? firstSeg[1] : timing.from;
-			this.#stopAt = opts?.continuous ? null : lastSeg ? lastSeg[2] : timing.to;
+			this.#stopAt = opts?.continuous
+				? null
+				: lastSeg
+					? this.#extendPastRelease(lastSeg, verse)
+					: timing.to;
 			if (opts?.words) {
 				const segments = timing.segments.filter(
 					(s) => s[0] >= opts.words!.from && s[0] <= opts.words!.to
 				);
 				if (segments.length) {
 					startMs = segments[0][1];
-					this.#stopAt = segments[segments.length - 1][2];
+					this.#stopAt = this.#rangeStop(segments[segments.length - 1], verse);
 				} else this.rangeActive = false;
 			}
 			audio.currentTime = startMs / 1000;
@@ -163,6 +170,48 @@ class Player {
 			}
 		} finally {
 			if (token === this.#playToken) this.loading = false;
+		}
+	}
+
+	/**
+	 * A single word plays its QDC per-word recording — sample-accurate where
+	 * the stream's word timestamps are not. A range plays from the reciter
+	 * stream instead, so the words stay connected as actually recited; its
+	 * edges may carry a sliver of the neighboring words.
+	 */
+	async playWords(surah: number, verse: number, words: { from: number; to: number }) {
+		if (!browser) return;
+		if (words.from !== words.to) return this.play(surah, verse, { words });
+		this.stop();
+		const token = ++this.#playToken;
+		const audio = (this.#wordAudio ??= new Audio());
+		this.current = { surah, verse };
+		this.rangeActive = true;
+		this.currentWord = words.from;
+		this.loading = true;
+		try {
+			audio.src = wordAudioUrl(surah, verse, words.from);
+			await audio.play();
+			if (token !== this.#playToken) return;
+			this.loading = false;
+			this.playing = true;
+			// 'pause' also resolves so an external stop()/play() can't strand
+			// this await waiting for an 'ended' that never comes.
+			await new Promise<void>((resolve, reject) => {
+				audio.addEventListener('ended', () => resolve(), { once: true });
+				audio.addEventListener('pause', () => resolve(), { once: true });
+				audio.addEventListener('error', () => reject(new Error('word audio failed')), {
+					once: true
+				});
+			});
+		} catch {
+			/* cleanup below */
+		} finally {
+			if (token === this.#playToken) {
+				this.playing = false;
+				this.loading = false;
+				this.#reset();
+			}
 		}
 	}
 
@@ -192,12 +241,39 @@ class Player {
 
 	/** Stop playback entirely and clear the now-playing state. */
 	stop() {
-		if (!this.#audio) return;
 		this.#playToken++;
-		this.#audio.pause();
+		this.#audio?.pause();
+		this.#wordAudio?.pause();
+		this.playing = false;
 		this.#reset();
 		this.loading = false;
 		this.#stopAt = null;
+	}
+
+	/**
+	 * QDC segment ends land slightly before the recitation actually decays, so
+	 * stopping right at one clips a final long harakat. Extend the stop into
+	 * the gap that follows — up to the next word's onset (this verse or the
+	 * next), never more than a natural release lasts.
+	 */
+	#extendPastRelease(lastSeg: [number, number, number], verse: number): number {
+		const RELEASE_MS = 300;
+		const end = lastSeg[2];
+		const timing = this.#timings?.verses[verse - 1];
+		const nextOnset =
+			timing?.segments.find((s) => s[0] > lastSeg[0])?.[1] ??
+			this.#timings?.verses[verse]?.segments[0]?.[1] ??
+			Infinity;
+		return Math.min(end + RELEASE_MS, Math.max(nextOnset, end));
+	}
+
+	/**
+	 * A range's final boundary is a mid-verse QDC timestamp, which sits
+	 * 150-300ms early — bleed a little into the next word rather than clip
+	 * this one's final harakat.
+	 */
+	#rangeStop(lastSeg: [number, number, number], verse: number): number {
+		return Math.max(this.#extendPastRelease(lastSeg, verse), lastSeg[2] + 200);
 	}
 
 	/** Precise start/end of a verse: its word segments (windows bleed). */
@@ -240,8 +316,10 @@ class Player {
 				timing = found;
 			}
 		}
+		// Past the last segment but before the scheduled stop is the release
+		// tail — keep the final word lit while its harakat decays.
 		const segment = timing?.segments.find((s) => t >= s[1] && t < s[2]);
-		const word = segment ? segment[0] : null;
+		const word = segment?.[0] ?? (this.#stopAt !== null ? this.currentWord : null);
 		if (word !== this.currentWord) this.currentWord = word;
 
 		if (this.playing) this.#raf = requestAnimationFrame(this.#tick);

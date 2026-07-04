@@ -209,6 +209,11 @@ body {
 	contain-intrinsic-size: auto 40rem;
 }
 
+/* Long-press word selection replaces the native callout / context menu. */
+[lang='ar'] {
+	-webkit-touch-callout: none;
+}
+
 /*
  * Follow-along highlight: soft accent pill drawn purely with paint
  * (box-shadow spread, no padding) so wrapped RTL text never reflows.
@@ -220,9 +225,14 @@ body {
 	border-radius: 8px;
 }
 
-/* Blocking Arabic text is a feature (word popover) — tint it to match. */
-[lang='ar']::selection,
-[lang='ar'] *::selection {
-	background-color: color-mix(in srgb, var(--accent) 22%, transparent);
-	color: var(--accent);
+/*
+ * Reader word selection: an underline, deliberately quieter than the
+ * playback pill so the word being recited stays visible inside a
+ * selected range.
+ */
+.word-selected {
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+	text-decoration-thickness: 2px;
+	text-underline-offset: 8px;
 }

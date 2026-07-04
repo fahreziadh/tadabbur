@@ -4,6 +4,7 @@
 	import { player } from '$lib/player.svelte';
 	import { dur } from '$lib/motion';
 	import { lazyObserve } from '$lib/lazy-cards';
+	import { wordHighlight } from '$lib/word-highlight.svelte';
 	import type { Verse } from '$lib/quran/types';
 	import { verseTranslation } from '$lib/quran/locale';
 	import { arabicVerseNumber } from '$lib/quran/format';
@@ -101,12 +102,15 @@
 	<p
 		dir="rtl"
 		lang="ar"
-		class="font-arabic text-ink leading-loose"
+		class="font-arabic text-ink leading-loose select-none"
 		style="font-size: var(--arabic-size)"
 	>
 		{#if hydrated}{#each verse.words as word, i (i)}<span
 					data-word={i + 1}
-					class="transition-colors duration-100 {activeWord === i + 1 ? 'word-active' : ''}"
+					class="cursor-pointer transition-colors duration-100 can-hover:hover:text-accent {activeWord ===
+					i + 1
+						? 'word-active'
+						: ''} {wordHighlight.covers(surah, verse.n, i + 1) ? 'word-selected' : ''}"
 					>{word.a + ' '}</span
 				>{/each}{:else}{plainText}{/if}<span
 			class="text-accent mx-1 inline-block"

@@ -49,7 +49,9 @@ export function getTimings(reciter: number, surah: number): Promise<SurahTimings
 						key: vt.verse_key,
 						from: vt.timestamp_from,
 						to: vt.timestamp_to,
-						segments: vt.segments ?? []
+						// QDC data contains stray 1-element tuples (e.g. Alafasy 1:3) —
+						// they would poison range ends and the verse span lookups.
+						segments: (vt.segments ?? []).filter((s) => s.length === 3)
 					}))
 				};
 			});

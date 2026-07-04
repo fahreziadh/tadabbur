@@ -7,6 +7,7 @@
 	import { player } from '$lib/player.svelte';
 	import { getSurah } from '$lib/quran/data';
 	import { chapterName } from '$lib/quran/locale';
+	import { wordHighlight } from '$lib/word-highlight.svelte';
 	import type { SurahData, Verse } from '$lib/quran/types';
 	import { m } from '$lib/paraglide/messages';
 	import Icon from '$lib/components/Icon.svelte';
@@ -151,44 +152,206 @@
 		if (!inView) el.scrollIntoView({ block: 'center', behavior: dur(1) ? 'smooth' : 'auto' });
 	});
 
-	// Selecting (blocking) Arabic words opens a word-by-word popover.
-	let selection = $state<{ verse: Verse; from: number; to: number; x: number; y: number } | null>(
-		null
-	);
+	// Tapping a word opens (pins) its translation popover; on devices with a
+	// mouse, hovering previews it. The Arabic text is unselectable, so words
+	// act as plain tap targets instead of fighting native text selection.
+	interface WordSelection {
+		verse: Verse;
+		from: number;
+		to: number;
+		x: number;
+		top: number;
+		bottom: number;
+		pinned: boolean;
+	}
 
-	function onPointerUp(event: PointerEvent) {
-		if ((event.target as Element).closest?.('[data-selection-popover]')) return;
-		requestAnimationFrame(() => {
-			const sel = document.getSelection();
-			if (!sel || sel.isCollapsed || !surahData) {
-				selection = null;
-				return;
-			}
-			const range = sel.getRangeAt(0);
-			const node = range.commonAncestorContainer;
-			const el = node instanceof Element ? node : node.parentElement;
-			const article = el?.closest<HTMLElement>('[data-verse]');
-			if (!article) {
-				selection = null;
-				return;
-			}
-			const spans = [...article.querySelectorAll<HTMLElement>('[data-word]')].filter((span) =>
-				range.intersectsNode(span)
-			);
-			if (!spans.length) {
-				selection = null;
-				return;
-			}
-			const verse = surahData.verses[Number(article.dataset.verse) - 1];
-			const rect = range.getBoundingClientRect();
-			selection = {
-				verse,
-				from: Number(spans[0].dataset.word),
-				to: Number(spans[spans.length - 1].dataset.word),
-				x: rect.left + rect.width / 2,
-				y: rect.top
-			};
+	let selection = $state<WordSelection | null>(null);
+
+	type WordHit = { verse: Verse; word: number; el: Element };
+
+	function wordAt(target: EventTarget | null): WordHit | null {
+		if (!surahData || !(target instanceof Element)) return null;
+		const el = target.closest('[data-word]');
+		const verseEl = el?.closest<HTMLElement>('[data-verse]');
+		if (!el || !verseEl) return null;
+		const verse = surahData.verses[Number(verseEl.dataset.verse) - 1];
+		return { verse, word: Number((el as HTMLElement).dataset.word), el };
+	}
+
+	function selectWord(hit: WordHit, pinned: boolean) {
+		const rect = hit.el.getBoundingClientRect();
+		selection = {
+			verse: hit.verse,
+			from: hit.word,
+			to: hit.word,
+			x: rect.left + rect.width / 2,
+			top: rect.top,
+			bottom: rect.bottom,
+			pinned
+		};
+	}
+
+	function selectRange(verse: Verse, from: number, to: number) {
+		const spans = [
+			...main.querySelectorAll<HTMLElement>(`[data-verse="${verse.n}"] [data-word]`)
+		].filter((span) => {
+			const word = Number(span.dataset.word);
+			return word >= from && word <= to;
 		});
+		if (!spans.length) return;
+		const rects = spans.map((span) => span.getBoundingClientRect());
+		selection = {
+			verse,
+			from,
+			to,
+			x: (Math.min(...rects.map((r) => r.left)) + Math.max(...rects.map((r) => r.right))) / 2,
+			top: Math.min(...rects.map((r) => r.top)),
+			bottom: Math.max(...rects.map((r) => r.bottom)),
+			pinned: true
+		};
+	}
+
+	// The word pills mirror whatever the popover shows; a live drag takes over
+	// the highlight imperatively until it lands in `selection`.
+	$effect(() => {
+		wordHighlight.range = selection
+			? { surah: data.surah, verse: selection.verse.n, from: selection.from, to: selection.to }
+			: null;
+	});
+
+	// Dragging across words (mouse) or long-press then drag (touch) selects a
+	// word range — our own highlight, never native text selection.
+	let drag: { verse: Verse; anchor: number; to: number; touch: boolean } | null = null;
+	let dragMoved = false;
+	let suppressClick = false;
+	let longPress: ReturnType<typeof setTimeout> | undefined;
+	let press: { x: number; y: number; hit: WordHit } | null = null;
+
+	const blockTouchScroll = (event: TouchEvent) => event.preventDefault();
+
+	function dragRange(): { from: number; to: number } {
+		return {
+			from: Math.min(drag!.anchor, drag!.to),
+			to: Math.max(drag!.anchor, drag!.to)
+		};
+	}
+
+	function beginTouchRange(hit: WordHit) {
+		press = null;
+		drag = { verse: hit.verse, anchor: hit.word, to: hit.word, touch: true };
+		dragMoved = true;
+		wordHighlight.range = { surah: data.surah, verse: hit.verse.n, from: hit.word, to: hit.word };
+		main.addEventListener('touchmove', blockTouchScroll, { passive: false });
+		navigator.vibrate?.(15);
+	}
+
+	function cancelPress() {
+		clearTimeout(longPress);
+		press = null;
+	}
+
+	function endDrag() {
+		main.removeEventListener('touchmove', blockTouchScroll);
+		if (drag && dragMoved && !selection?.pinned) wordHighlight.range = null;
+		drag = null;
+		dragMoved = false;
+	}
+
+	function onMainPointerDown(event: PointerEvent) {
+		suppressClick = false;
+		const hit = wordAt(event.target);
+		if (!hit) return;
+		if (event.pointerType === 'mouse') {
+			if (event.button !== 0) return;
+			drag = { verse: hit.verse, anchor: hit.word, to: hit.word, touch: false };
+			dragMoved = false;
+		} else {
+			press = { x: event.clientX, y: event.clientY, hit };
+			clearTimeout(longPress);
+			longPress = setTimeout(() => beginTouchRange(hit), 450);
+		}
+	}
+
+	function onMainPointerMove(event: PointerEvent) {
+		if (press) {
+			if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12) cancelPress();
+			return;
+		}
+		if (!drag) return;
+		const hit = wordAt(document.elementFromPoint(event.clientX, event.clientY));
+		if (!hit || hit.verse !== drag.verse || hit.word === drag.to) return;
+		drag.to = hit.word;
+		if (!drag.touch && !dragMoved && hit.word !== drag.anchor) {
+			dragMoved = true;
+			if (!selection?.pinned) selection = null;
+			// Capture so the drag survives the pointer leaving <main>; the
+			// synthetic click this retargets is suppressed on pointerup anyway.
+			main.setPointerCapture(event.pointerId);
+		}
+		if (dragMoved) {
+			wordHighlight.range = { surah: data.surah, verse: drag.verse.n, ...dragRange() };
+		}
+	}
+
+	function onMainPointerUp() {
+		cancelPress();
+		if (!drag) return;
+		if (dragMoved) {
+			const { from, to } = dragRange();
+			suppressClick = true;
+			selectRange(drag.verse, from, to);
+		}
+		endDrag();
+	}
+
+	function onMainPointerCancel() {
+		cancelPress();
+		endDrag();
+	}
+
+	function onMainContextMenu(event: MouseEvent) {
+		if (press || drag?.touch) event.preventDefault();
+	}
+
+	function onMainClick(event: MouseEvent) {
+		if (suppressClick) {
+			suppressClick = false;
+			return;
+		}
+		const hit = wordAt(event.target);
+		if (!hit) {
+			selection = null;
+			return;
+		}
+		const samePinnedWord =
+			selection?.pinned && selection.verse === hit.verse && selection.from === hit.word;
+		if (samePinnedWord) selection = null;
+		else selectWord(hit, true);
+	}
+
+	function onMainPointerOver(event: PointerEvent) {
+		if (event.pointerType !== 'mouse' || selection?.pinned || drag) return;
+		const hit = wordAt(event.target);
+		if (hit) selectWord(hit, false);
+	}
+
+	// The card carries an invisible bridge over the gap to the word, so a
+	// pointer heading into it never reads as "outside" — no close delay needed.
+	// Leaving toward another word keeps the card mounted; the pointerover that
+	// follows retargets it in place instead of blinking it closed and open.
+	function onMainPointerOut(event: PointerEvent) {
+		if (event.pointerType !== 'mouse' || !wordAt(event.target)) return;
+		if (!selection || selection.pinned) return;
+		const into = event.relatedTarget as Element | null;
+		if (into?.closest?.('[role="tooltip"]') || wordAt(into)) return;
+		selection = null;
+	}
+
+	function onPopoverPointerLeave(event: PointerEvent) {
+		if (event.pointerType !== 'mouse' || !selection || selection.pinned) return;
+		const hit = wordAt(event.relatedTarget);
+		if (hit && hit.verse === selection.verse && hit.word === selection.from) return;
+		selection = null;
 	}
 
 	// j/k (or arrows) move keyboard focus between verses.
@@ -265,7 +428,14 @@
 	data-pane
 	tabindex="-1"
 	class="min-w-0 grow overflow-y-auto focus:outline-none md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden"
-	onpointerup={onPointerUp}
+	onclick={onMainClick}
+	onpointerdown={onMainPointerDown}
+	onpointermove={onMainPointerMove}
+	onpointerup={onMainPointerUp}
+	onpointercancel={onMainPointerCancel}
+	onpointerover={onMainPointerOver}
+	onpointerout={onMainPointerOut}
+	oncontextmenu={onMainContextMenu}
 	onscroll={() => (selection = null)}
 	onkeydown={onMainKeydown}
 >
@@ -344,7 +514,7 @@
 			<p
 				dir="rtl"
 				lang="ar"
-				class="font-arabic border-edge-soft text-ink border-y py-6 text-center text-3xl"
+				class="font-arabic border-edge-soft text-ink border-y py-6 text-center text-3xl select-none"
 			>
 				بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
 			</p>
@@ -359,7 +529,7 @@
 							<p
 								dir="rtl"
 								lang="ar"
-								class="font-arabic text-ink verse-page leading-loose"
+								class="font-arabic text-ink verse-page leading-loose select-none"
 								style="font-size: var(--arabic-size)"
 							>
 								{#each group.verses as verse (verse.key)}<VerseFlow
@@ -412,8 +582,17 @@
 </main>
 
 {#if selection}
-	<div data-selection-popover>
-		<SelectionPopover surah={data.surah} {...selection} />
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div onpointerleave={onPopoverPointerLeave}>
+		<SelectionPopover
+			surah={data.surah}
+			verse={selection.verse}
+			from={selection.from}
+			to={selection.to}
+			x={selection.x}
+			top={selection.top}
+			bottom={selection.bottom}
+		/>
 	</div>
 {/if}
 

@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import type { ReciterId } from './quran/audio';
 import { dateKey } from './progress';
 
-export type SidebarView = 'surahs' | 'search' | 'notes';
+export type SidebarView = 'surahs' | 'search' | 'notes' | 'progress';
 export type Theme = 'light' | 'dark' | 'mushaf' | 'rawdah' | 'sea' | 'night';
 export const themes: Theme[] = ['light', 'dark', 'mushaf', 'rawdah', 'sea', 'night'];
 /** Themes that also get the `.dark` class (for the `dark:` Tailwind variant). */

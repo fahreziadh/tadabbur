@@ -8,7 +8,8 @@
 	const items: { view: SidebarView; icon: string; label: () => string }[] = [
 		{ view: 'surahs', icon: 'book', label: m.nav_surahs },
 		{ view: 'search', icon: 'search', label: m.nav_search },
-		{ view: 'notes', icon: 'note', label: m.nav_notes }
+		{ view: 'notes', icon: 'note', label: m.nav_notes },
+		{ view: 'progress', icon: 'chart', label: m.nav_progress }
 	];
 
 	function itemClass(view: SidebarView): string {
@@ -43,18 +44,6 @@
 			<Icon name={item.icon} />
 		</button>
 	{/each}
-
-	<a
-		href={resolve('/progress')}
-		class="flex h-9 w-9 items-center justify-center rounded-lg no-hover:h-11 no-hover:w-11 transition-colors {page
-			.url.pathname === '/progress'
-			? 'bg-accent-soft text-accent'
-			: 'text-faint hover:bg-edge-soft hover:text-body'}"
-		title={m.nav_progress()}
-		aria-label={m.nav_progress()}
-	>
-		<Icon name="chart" />
-	</a>
 
 	<div class="grow"></div>
 

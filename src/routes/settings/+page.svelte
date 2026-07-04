@@ -296,7 +296,7 @@
 										class="bg-surface block rounded-lg border border-edge-soft px-2.5 pt-2 pb-2.5"
 									>
 										<span class="text-ink font-arabic block truncate text-[13px] leading-relaxed">
-											بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+											بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
 										</span>
 										<span class="bg-body/50 mt-1.5 block h-1 w-4/5 rounded-full"></span>
 										<span class="bg-muted/40 mt-1 block h-1 w-3/5 rounded-full"></span>
@@ -353,7 +353,7 @@
 										class="text-ink block text-2xl leading-loose"
 										style="font-family: {arabicFontStacks[font.value]}"
 									>
-										بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+										بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
 									</span>
 									<span class="text-faint mt-2 block text-xs font-medium">{font.label}</span>
 								</button>
@@ -383,7 +383,7 @@
 							class="font-arabic text-ink bg-paper mt-3 rounded-xl border border-edge-soft px-4 py-5 text-center leading-loose"
 							style="font-size: var(--arabic-size)"
 						>
-							بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+							بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
 						</p>
 					</div>
 				</div>
